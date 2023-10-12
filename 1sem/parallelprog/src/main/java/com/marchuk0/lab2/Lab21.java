@@ -56,7 +56,11 @@ public class Lab21 {
                 philosophers[i] = new Philosopher(left, right);
             }
 
-            new Thread(philosophers[i], "" + i).start();
+            int priority = (i == 1 || i == 2) ? 2 : 1;
+
+            Thread thread = new Thread(philosophers[i], "" + i);
+            thread.setPriority(priority);
+            thread.start();
         }
     }
     

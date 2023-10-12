@@ -3,10 +3,13 @@ package com.marchuk0.lab2;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+//TODO:
 public class Lab22 {
     private static class Library {
         Map<String, Integer> books = new HashMap<>();
         Map<Student, String> borrowedBooks = new HashMap<>();
+        Map<String, Integer> borrowedBookCounter = new HashMap<>();
+        Map<String, Integer> returnedBookCounter = new HashMap<>();
 
         ReentrantLock lock = new ReentrantLock();
 
@@ -26,6 +29,7 @@ public class Lab22 {
                 if (bookCounter > 0) {
                     books.put(bookTitle, bookCounter - 1);
                     borrowedBooks.put(student, bookTitle);
+                    incrementCounter(borrowedBookCounter, bookTitle);
                     return true;
                 } else {
                     return false;
@@ -45,6 +49,7 @@ public class Lab22 {
                 int bookCounter = books.getOrDefault(bookTitle, 0);
                 books.put(bookTitle, bookCounter + 1);
                 borrowedBooks.remove(student);
+                incrementCounter(returnedBookCounter, bookTitle);
 
                 return true;
             } finally {
@@ -64,6 +69,23 @@ public class Lab22 {
             }
         }
 
+        private void incrementCounter(Map<String, Integer> map, String bookTitle) {
+            int counter = map.getOrDefault(bookTitle, 0) + 1;
+            map.put(bookTitle, counter);
+        }
+        
+        public void printStatistics() {
+            System.out.println("Borrowed counter: ");
+            for (var bookToCounter : borrowedBookCounter.entrySet()) {
+                System.out.println(bookToCounter.getKey() + " " + bookToCounter.getValue());
+            }
+
+            System.out.println("Returned counter: ");
+            for (var bookToCounter : returnedBookCounter.entrySet()) {
+                System.out.println(bookToCounter.getKey() + " " + bookToCounter.getValue());
+            }
+        }
+
     }
 
     private static class Student implements Runnable {
@@ -79,7 +101,8 @@ public class Lab22 {
 
         @Override
         public void run() {
-            while(true) {
+            int cnt = random.nextInt(5);
+            while (cnt-- > 0) {
                 try {
                     getReadAndReturn();
                 } catch (InterruptedException e) {
@@ -122,15 +145,24 @@ public class Lab22 {
     private static class LibrarySimulator {
         private final Library library = new Library();
 
-        public void run() {
+        List<Thread> threads = new ArrayList<>();
+        public void run() throws InterruptedException {
             for (int i = 0; i < 5; i++) {
                 Student student = new Student(library, "Student" + i);
-                new Thread(student).start();
+                Thread thread = new Thread(student);
+                threads.add(thread);
+                thread.start();
             }
+            
+            for (var thread : threads) {
+                thread.join();
+            }
+
+            library.printStatistics();
         }
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) throws InterruptedException {
         LibrarySimulator simulator = new LibrarySimulator();
         simulator.run();
     }
